@@ -22,8 +22,10 @@
 #include <cstring>
 #include <cassert>
 #include <cstdlib>
+#include "ivymike/ascii_num.h"
 
 namespace ivy_mike {
+
 
 class sdf {
 
@@ -34,7 +36,7 @@ class sdf {
         
         atom( float x, float y, float z, int ele ) : m_x(x), m_y(y), m_z(z), m_ele(ele)
         {
-      //      printf( "atom: %f %f %f %c\n", x,y,z,ele);
+//            printf( "atom: %f %f %f %c\n", x,y,z,ele);
         }
     };
     struct bond {
@@ -45,7 +47,7 @@ class sdf {
         
         bond( int first, int second, int type ) : m_atoms(first,second), m_type(type)
         {
-        //    printf( "bond: %d %d %d\n", m_atoms.first, m_atoms.second, m_type );
+//            printf( "bond: %d %d %d\n", m_atoms.first, m_atoms.second, m_type );
         }
         
     };
@@ -88,24 +90,21 @@ class sdf {
         is.getline(line, line_len); assert( !is.eof() );
         int natoms, nbonds;
         // parse 'count line'
-        
+
         {
-            char nt[5];
             is.getline(line, line_len); assert( !is.eof() );
+
+            ascii_int<0,3>natoms_;
+            ascii_int<3,3+3>nbonds_;
             
-            nt[3] = 0;
+            natoms = natoms_[line];
+            nbonds = nbonds_[line];
             
-            std::copy( line, line + 3, nt );
-            natoms = atoi(nt);
-            
-            std::copy( line + 3, line + 3 + 3, nt );
-            nbonds = atoi(nt);
-            
-//             printf( "%d %d\n", natoms, nbonds );
+            printf( "%d %d\n", natoms, nbonds );
             
             assert( memcmp( line + 33, " V2000", 6 ) == 0 );
         }
-        
+
         mol.m_atoms.reserve( natoms );
         mol.m_bonds.reserve( nbonds );
         
@@ -113,45 +112,35 @@ class sdf {
         for( int i = 0; i < natoms; i++ ) {
             is.getline(line, line_len); assert( !is.eof() );
             
-            char nt[11];
-            nt[10] = 0;
             
-            std::copy( line, line + 10, nt );
-            const float x = atof( nt );
+            ascii_float<0,10>   x;
+            ascii_float<10,20>  y;
+            ascii_float<20,30>  z;
             
-            std::copy( line + 10, line + 10 + 10, nt );
-            const float y = atof( nt );
+           
             
-            std::copy( line + 20, line + 20 + 10, nt );
-            const float z = atof( nt );
-            
+            // find first non-space character, which is the element symbol
+            char nt[4];
             std::copy( line + 30, line + 30 + 3, nt );
             nt[3] = 0;
-
-            // find first non-space character, which is the element symbol
             char *ele = nt;
             while( *ele != 0 && isspace(*ele)) {
                 ele++;
             }
                
-            mol.m_atoms.push_back(atom(x,y,z,*ele));
+            mol.m_atoms.push_back(atom(x[line], y[line], z[line], *ele));
         }
         
         // parse 'bond block'
         for( int i = 0; i < nbonds; i++ ) {
             is.getline(line, line_len); assert( !is.eof() );
-            char nt[4];
-            nt[3] = 0;
-            std::copy( line, line + 3, nt );
-            int first = atoi(nt);
             
-            std::copy( line + 3, line + 3 + 3, nt );
-            int second = atoi(nt);
+            ascii_int<0,3>first;
+            ascii_int<3,6>second;
+            ascii_int<6,9>type;
             
-            std::copy( line + 6, line + 6 + 3, nt );
-            int type = atoi(nt);
             
-            mol.m_bonds.push_back(bond(first,second,type));
+            mol.m_bonds.push_back(bond(first[line], second[line], type[line] ));
         }
         
         // just ignore the rest for now:
