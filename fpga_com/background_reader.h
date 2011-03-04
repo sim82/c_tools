@@ -90,7 +90,7 @@ typedef struct fpga_bgr_s {
 } fpga_bgr_t;
 
 
-void fpga_bgr_init( fpga_bgr_t *bgr, int socket );
+void fpga_bgr_init( fpga_bgr_t *bgr, int socket, size_t size );
 void fpga_bgr_delete( fpga_bgr_t *bgr );
 
 void fpga_bgr_start( fpga_bgr_t *bgr);

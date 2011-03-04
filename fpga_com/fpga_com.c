@@ -75,9 +75,15 @@ ssize_t fpga_con_send( fpga_con_t *con, const void *buf, size_t len ) {
 }
 
 
-/*send an empty packet for fpga lut initialization*/
+/* send lut initialization packet sequence: rst, conf, empty*/
 void fpga_con_send_init_packet( fpga_con_t *con ) {
-    char buf[4];
+    uint8_t buf[4];
+    
+    buf[0] = 255;
+    fpga_con_send( con, buf, 1);
+    
+    buf[0] = 15;
+    fpga_con_send( con, buf, 1);
     
     fpga_con_send( con, buf, 0);
 }
@@ -195,7 +201,7 @@ int fpga_con_send_charv( fpga_con_t *con, char *buf, size_t n ) {
     while( sent < n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
-        pack_and_send( con, sb, MTU, 0, (void*) &buf[sent], to_copy, BS_NONE );
+        pack_and_send( con, sb, MTU, 1, (void*) &buf[sent], to_copy, BS_NONE );
         sent += to_copy;
     }
     
@@ -216,7 +222,7 @@ int fpga_con_send_shortv( fpga_con_t *con, short *buf, size_t n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
         //fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 0, (void*) &buf[sent], to_copy * TSIZE, BS_16 );
+        pack_and_send( con, sb, MTU, 2, (void*) &buf[sent], to_copy * TSIZE, BS_16 );
         
         sent += to_copy;
         
@@ -238,7 +244,7 @@ int fpga_con_send_intv( fpga_con_t *con, int *buf, size_t n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
 //         fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 0, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
+        pack_and_send( con, sb, MTU, 3, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
         
         sent += to_copy;
         
@@ -248,7 +254,24 @@ int fpga_con_send_intv( fpga_con_t *con, int *buf, size_t n ) {
 }
 
 int fpga_con_send_floatv( fpga_con_t *con, float *buf, size_t n ) {
-    return fpga_con_send_intv( con, (int*)buf, n );
+    const size_t TSIZE = sizeof( int );
+    
+    const size_t blocksize = (MTU - PH_SIZE) / TSIZE;
+    
+    uint8_t sb[MTU];
+    
+    size_t sent = 0;
+    while( sent < n ) {
+        const size_t to_copy = mymin( blocksize, n - sent );
+        
+//         fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
+        pack_and_send( con, sb, MTU, 4, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
+        
+        sent += to_copy;
+        
+    }
+    
+    return 1;
 }
 
 int fpga_con_send_doublev( fpga_con_t *con, double *buf, size_t n ) {
@@ -266,7 +289,7 @@ int fpga_con_send_doublev( fpga_con_t *con, double *buf, size_t n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
 //         fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 0, (void*) &buf[sent], to_copy * TSIZE, BS_64 );
+        pack_and_send( con, sb, MTU, 5, (void*) &buf[sent], to_copy * TSIZE, BS_64 );
         sent += to_copy;
     }
     
