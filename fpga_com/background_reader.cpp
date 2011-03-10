@@ -2,7 +2,7 @@
  * Copyright (C) 2011 Simon A. Berger
  * 
  *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
+ *  under the terms of the GNU Lesser General Public License as published by the Free
  *  Software Foundation; either version 2 of the License, or (at your option)
  *  any later version.
  *
@@ -87,16 +87,17 @@ void background_reader::run()
         
     }
     
-    const size_t MPU = 9000;
+    const size_t MTU = 64 * 1024;
 
-    char buf[MPU];
+    std::vector<char>bufs(MTU);
+    char *buf = bufs.data();
 
     //run_barrier->wait();
     //run_barrier = 0;
     m_run_barrier.wait();
     
     while ( !m_stop ) {
-        ssize_t s = recv( m_socket, buf, MPU, 0 );
+        ssize_t s = recv( m_socket, buf, MTU, 0 );
         
 //         if( s < 1024 && s != -1 ) {
 //             printf( "recved term packet %p\n", (void*)pthread_self() );

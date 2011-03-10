@@ -2,7 +2,7 @@
  * Copyright (C) 2011 Simon A. Berger
  * 
  *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
+ *  under the terms of the GNU Lesser General Public License as published by the Free
  *  Software Foundation; either version 2 of the License, or (at your option)
  *  any later version.
  *
@@ -25,6 +25,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+const size_t MAX_MTU = 64 * 1024; 
 
 static void die_perror( const char *call ) {
     perror( call );
@@ -59,9 +60,23 @@ void fpga_con_init( fpga_con_t *con, const void *daddr, int lport, int dport ) {
     if( r < 0 ) {
 	die_perror( "bind" );
     }
- 
- 
+    con->mtu = 1500;
 }
+
+size_t fpga_con_get_mtu( fpga_con_t *con ) {
+ 
+    return con->mtu;
+}
+
+void fpga_con_set_mtu( fpga_con_t *con, size_t mtu ) {
+ 
+    if( mtu > MAX_MTU ) {
+        printf( "fpga_con_set_mtu: mtu > MAX_MTU\n" );
+        exit(-1);
+    }
+    con->mtu = mtu;
+}
+
 
 ssize_t fpga_con_send( fpga_con_t *con, const void *buf, size_t len ) {
     
@@ -105,7 +120,7 @@ static __inline size_t mymin( size_t a, size_t b ) {
     return a < b ? a : b;
 }
 
-const static size_t MTU = 1500;
+//const static size_t MTU = 1500;
 const static size_t PH_SIZE = 1;
 
 
@@ -194,14 +209,14 @@ static __inline size_t pack_and_send( fpga_con_t *con, uint8_t *buf, size_t buf_
 int fpga_con_send_charv( fpga_con_t *con, char *buf, size_t n ) {
     
     
-    const size_t blocksize = (MTU - PH_SIZE);
-    uint8_t sb[MTU];
+    const size_t blocksize = (con->mtu - PH_SIZE);
+    uint8_t sb[MAX_MTU];
     
     size_t sent = 0;
     while( sent < n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
-        pack_and_send( con, sb, MTU, 1, (void*) &buf[sent], to_copy, BS_NONE );
+        pack_and_send( con, sb, con->mtu, 1, (void*) &buf[sent], to_copy, BS_NONE );
         sent += to_copy;
     }
     
@@ -214,15 +229,15 @@ int fpga_con_send_shortv( fpga_con_t *con, short *buf, size_t n ) {
     
     const size_t TSIZE = sizeof( short );
     
-    const size_t blocksize = (MTU - PH_SIZE) / TSIZE;
-    uint8_t sb[MTU];
+    const size_t blocksize = (con->mtu - PH_SIZE) / TSIZE;
+    uint8_t sb[MAX_MTU];
     
     size_t sent = 0;
     while( sent < n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
         //fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 2, (void*) &buf[sent], to_copy * TSIZE, BS_16 );
+        pack_and_send( con, sb, con->mtu, 2, (void*) &buf[sent], to_copy * TSIZE, BS_16 );
         
         sent += to_copy;
         
@@ -235,16 +250,16 @@ int fpga_con_send_intv( fpga_con_t *con, int *buf, size_t n ) {
     
     const size_t TSIZE = sizeof( int );
     
-    const size_t blocksize = (MTU - PH_SIZE) / TSIZE;
+    const size_t blocksize = (con->mtu - PH_SIZE) / TSIZE;
     
-    uint8_t sb[MTU];
+    uint8_t sb[MAX_MTU];
     
     size_t sent = 0;
     while( sent < n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
 //         fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 3, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
+        pack_and_send( con, sb, con->mtu, 3, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
         
         sent += to_copy;
         
@@ -256,16 +271,16 @@ int fpga_con_send_intv( fpga_con_t *con, int *buf, size_t n ) {
 int fpga_con_send_floatv( fpga_con_t *con, float *buf, size_t n ) {
     const size_t TSIZE = sizeof( int );
     
-    const size_t blocksize = (MTU - PH_SIZE) / TSIZE;
+    const size_t blocksize = (con->mtu - PH_SIZE) / TSIZE;
     
-    uint8_t sb[MTU];
+    uint8_t sb[MAX_MTU];
     
     size_t sent = 0;
     while( sent < n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
 //         fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 4, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
+        pack_and_send( con, sb, con->mtu, 4, (void*) &buf[sent], to_copy * TSIZE, BS_32 );
         
         sent += to_copy;
         
@@ -279,9 +294,9 @@ int fpga_con_send_doublev( fpga_con_t *con, double *buf, size_t n ) {
     
     const size_t TSIZE = sizeof( double );
     
-    const size_t blocksize = (MTU - PH_SIZE) / TSIZE;
+    const size_t blocksize = (con->mtu - PH_SIZE) / TSIZE;
     
-    uint8_t sb[MTU];
+    uint8_t sb[MAX_MTU];
     
     
     size_t sent = 0;
@@ -289,7 +304,7 @@ int fpga_con_send_doublev( fpga_con_t *con, double *buf, size_t n ) {
         const size_t to_copy = mymin( blocksize, n - sent );
         
 //         fpga_con_send( con, (void*) &buf[sent], to_copy * TSIZE );
-        pack_and_send( con, sb, MTU, 5, (void*) &buf[sent], to_copy * TSIZE, BS_64 );
+        pack_and_send( con, sb, con->mtu, 5, (void*) &buf[sent], to_copy * TSIZE, BS_64 );
         sent += to_copy;
     }
     
